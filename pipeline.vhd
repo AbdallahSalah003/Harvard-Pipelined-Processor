@@ -30,7 +30,7 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL id_ex_in_preserveflags, id_ex_in_branch, id_ex_in_memwritesrc, id_ex_in_RegDst, id_ex_in_usersrc1, id_ex_in_usersrc2 : STD_LOGIC;
     SIGNAL id_ex_in_branchselector, id_ex_in_memaddsrc, id_ex_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL id_ex_in_ALU_Select, id_ex_in_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
-    SIGNAL id_ex_in_regWrite, id_ex_in_aluSource, id_ex_in_HLT, id_ex_in_MW, id_ex_in_MR, id_ex_in_SP_Plus, id_ex_in_SP_Negative, id_ex_in_OUT_enable, id_ex_in_RET, id_ex_in_INT : STD_LOGIC;
+    SIGNAL id_ex_in_regWrite, id_ex_in_aluSource, id_ex_in_MW, id_ex_in_MR, id_ex_in_SP_Plus, id_ex_in_SP_Negative, id_ex_in_OUT_enable, id_ex_in_RET, id_ex_in_INT : STD_LOGIC;
     SIGNAL id_ex_in_rsrc1, id_ex_in_rsrc2, id_ex_in_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
 
     SIGNAL id_ex_out_pc, id_ex_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
@@ -38,7 +38,7 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL id_ex_out_preserveflags, id_ex_out_branch, id_ex_out_memwritesrc, id_ex_out_RegDst, id_ex_out_usersrc1, id_ex_out_usersrc2 : STD_LOGIC;
     SIGNAL id_ex_out_branchselector, id_ex_out_memaddsrc, id_ex_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL id_ex_out_ALU_Select, id_ex_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
-    SIGNAL id_ex_out_regWrite, id_ex_out_aluSource, id_ex_out_HLT, id_ex_out_MW, id_ex_out_MR, id_ex_out_SP_Plus, id_ex_out_SP_Negative, id_ex_out_OUT_enable, id_ex_out_RET, id_ex_out_INT : STD_LOGIC;
+    SIGNAL id_ex_out_regWrite, id_ex_out_aluSource, id_ex_out_MW, id_ex_out_MR, id_ex_out_SP_Plus, id_ex_out_SP_Negative, id_ex_out_OUT_enable, id_ex_out_RET, id_ex_out_INT : STD_LOGIC;
     SIGNAL id_ex_out_rsrc1, id_ex_out_rsrc2, id_ex_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
 
     SIGNAL id_ex_alu_oper1, id_ex_alu_oper2, id_ex_alu_oper2_pre : STD_LOGIC_VECTOR(15 DOWNTO 0); --ALU operand
@@ -74,7 +74,9 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL mem_forward_data, wb_forward_data : STD_LOGIC_VECTOR(15 DOWNTO 0); --OUTPUT OF Forwarding Unit
     SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- ALU Source Selector
 
-    SIGNAL pc_stall : STD_LOGIC;
+    SIGNAL pc_stall : STD_LOGIC := '0';
+    SIGNAL HLT : STD_LOGIC := '0';
+    SIGNAL pause_ifid : STD_LOGIC := '0';
 
     --------------------------------------------------------------------------------------------------------  
 
@@ -180,7 +182,6 @@ ARCHITECTURE behavior OF processor IS
             id_ex_in_reserved_flags : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
             id_ex_in_regWrite : IN STD_LOGIC;
             id_ex_in_aluSource : IN STD_LOGIC;
-            id_ex_in_HLT : IN STD_LOGIC;
             id_ex_in_MW : IN STD_LOGIC;
             id_ex_in_MR : IN STD_LOGIC;
             id_ex_in_SP_Plus : IN STD_LOGIC;
@@ -212,7 +213,6 @@ ARCHITECTURE behavior OF processor IS
             id_ex_out_reserved_flags : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
             id_ex_out_regWrite : OUT STD_LOGIC;
             id_ex_out_aluSource : OUT STD_LOGIC;
-            id_ex_out_HLT : OUT STD_LOGIC;
             id_ex_out_MW : OUT STD_LOGIC;
             id_ex_out_MR : OUT STD_LOGIC;
             id_ex_out_SP_Plus : OUT STD_LOGIC;
@@ -350,26 +350,26 @@ ARCHITECTURE behavior OF processor IS
 
         );
     END COMPONENT;
-    COMPONENT interrupt_table is
-        port(
-            index : in std_logic_vector(3 downto 0);
-            data_out : out std_logic_vector(15 downto 0)
+    COMPONENT interrupt_table IS
+        PORT (
+            index : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+            data_out : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
         );
     END COMPONENT;
-    COMPONENT ACU is
-        port(
-            decodeexecute_pc, executememory_pc : in std_logic_vector(11 downto 0);
-            interrupt_address, alu_src, mem_out : in std_logic_vector(15 downto 0);
-            decodeexecute_branch_selector : in std_logic_vector(1 downto 0);
-            execute_flag_register : in std_logic_vector (2 downto 0);
-            decodeexecute_branch_signal, reset, sp_overflow, memadd_overflow, decodeexecute_interrupt_signal, return_signal  : in std_logic;
-            out_address, old_pc : out std_logic_vector (11 downto 0);
-            out_flag_register : out std_logic_vector (2 downto 0);
-            exception_flag, address_change_flag, stage_detector, flag_enable : out std_logic -- stage_detection { 1=>mem, 0=>execute  }
+    COMPONENT ACU IS
+        PORT (
+            decodeexecute_pc, executememory_pc : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+            interrupt_address, alu_src, mem_out : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            decodeexecute_branch_selector : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            execute_flag_register : IN STD_LOGIC_VECTOR (2 DOWNTO 0);
+            decodeexecute_branch_signal, reset, sp_overflow, memadd_overflow, decodeexecute_interrupt_signal, return_signal : IN STD_LOGIC;
+            out_address, old_pc : OUT STD_LOGIC_VECTOR (11 DOWNTO 0);
+            out_flag_register : OUT STD_LOGIC_VECTOR (2 DOWNTO 0);
+            exception_flag, address_change_flag, stage_detector, flag_enable : OUT STD_LOGIC -- stage_detection { 1=>mem, 0=>execute  }
         );
     END COMPONENT;
-    COMPONENT FlushUnit is
-        PORT(
+    COMPONENT FlushUnit IS
+        PORT (
             -- Inputs
             branch : IN STD_LOGIC; -- branching exist or not
             stage : IN STD_LOGIC; -- branching stage 0=Excute, 1=Memory
@@ -382,6 +382,8 @@ ARCHITECTURE behavior OF processor IS
 BEGIN
     reset_ifid <= reset OR ((NOT instruction_reg(0)) AND instruction(0));
     reset_idie <= pc_stall;
+    pause_ifid <= (pc_stall OR HLT);
+
     selected_instruction_ifid <= instruction_reg WHEN instruction_reg(0) = '1' ELSE
         instruction;
     selected_immediate_ifid <= instruction AND (0 TO 15 => instruction_reg(0));
@@ -436,9 +438,10 @@ BEGIN
     memory_address <= sp_new WHEN ex_mem_out_memaddsrc = "10" ELSE
         sp WHEN ex_mem_out_memaddsrc = "01" ELSE
         ex_mem_out_alu_result(11 DOWNTO 0);
-    
-    memory_address_overflow <= '1' when (ex_mem_out_MR = '1') and (ex_mem_out_memaddsrc = "11" or ex_mem_out_memaddsrc = "00") and ( ex_mem_out_alu_result(12) = '1' or ex_mem_out_alu_result(15) = '1' or ex_mem_out_alu_result(14) = '1' or ex_mem_out_alu_result(13) = '1' ) 
-        else '0';
+
+    memory_address_overflow <= '1' WHEN (ex_mem_out_MR = '1') AND (ex_mem_out_memaddsrc = "11" OR ex_mem_out_memaddsrc = "00") AND (ex_mem_out_alu_result(12) = '1' OR ex_mem_out_alu_result(15) = '1' OR ex_mem_out_alu_result(14) = '1' OR ex_mem_out_alu_result(13) = '1')
+        ELSE
+        '0';
 
     memory_data_in <= "0000" & ex_mem_out_pc_1 WHEN ex_mem_out_memwritesrc = '1' ELSE
         ex_mem_out_rsrc2;
@@ -483,7 +486,7 @@ BEGIN
     IFIDRegister1 : if_id_register PORT MAP(
         clk => clk,
         reset => reset_ifid,
-        pause => pc_stall,
+        pause => pause_ifid,
         pc => pc,
         reserved_flags => reserved_flags,
         instruction => selected_instruction_ifid,
@@ -524,7 +527,6 @@ BEGIN
         id_ex_in_reserved_flags => id_ex_in_reserved_flags,
         id_ex_in_regWrite => id_ex_in_regWrite,
         id_ex_in_aluSource => id_ex_in_aluSource,
-        id_ex_in_HLT => id_ex_in_HLT,
         id_ex_in_MW => id_ex_in_MW,
         id_ex_in_MR => id_ex_in_MR,
         id_ex_in_SP_Plus => id_ex_in_SP_Plus,
@@ -556,7 +558,6 @@ BEGIN
         id_ex_out_reserved_flags => id_ex_out_reserved_flags,
         id_ex_out_regWrite => id_ex_out_regWrite,
         id_ex_out_aluSource => id_ex_out_aluSource,
-        id_ex_out_HLT => id_ex_out_HLT,
         id_ex_out_MW => id_ex_out_MW,
         id_ex_out_MR => id_ex_out_MR,
         id_ex_out_SP_Plus => id_ex_out_SP_Plus,
@@ -663,7 +664,7 @@ BEGIN
         memaddsrc => id_ex_in_memaddsrc,
         regWrite => id_ex_in_regWrite,
         aluSource => id_ex_in_aluSource,
-        HLT => id_ex_in_HLT,
+        HLT => HLT,
         MW => id_ex_in_MW,
         MR => id_ex_in_MR,
         WB_Select => id_ex_in_wb_select,
@@ -704,7 +705,7 @@ BEGIN
     HazardDetection1 : HazardDetection PORT MAP(
         -- CLOCK
         clk => clk,
-        
+
         -- Inputs
         id_ie_mem_read => id_ex_out_MR, -- IE/MEM memRead  signal
         id_ie_reg_write => id_ex_out_regWrite, -- IE/MEM RegWrite signal
@@ -753,16 +754,16 @@ BEGIN
             reserved_flags <= (OTHERS => '0');
             instruction_reg <= (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
-            IF (pc_stall = '0') THEN
+            IF (pc_stall = '0' OR HLT = '1') THEN
                 pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
             END IF;
             IF instruction_reg(0) = '1' THEN
-            instruction_reg <= (OTHERS => '0');
+                instruction_reg <= (OTHERS => '0');
             ELSE
-            instruction_reg <= instruction;
+                instruction_reg <= instruction;
             END IF;
             IF mem_wb_out_OUT_enable = '1' THEN
-            out_port_internal <= mem_wb_out_dataout;
+                out_port_internal <= mem_wb_out_dataout;
             END IF;
             IF acu_exception_flag = '1' THEN
                 exception_pc <= acu_old_pc;
