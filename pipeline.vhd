@@ -78,6 +78,8 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL HLT : STD_LOGIC := '0';
     SIGNAL pause_ifid : STD_LOGIC := '0';
 
+    SIGNAL flush_if_id, flush_id_ie, flush_ie_mem : STD_LOGIC := '0';
+
     --------------------------------------------------------------------------------------------------------  
 
     SIGNAL mem_wb_in_regwrite, mem_wb_in_OUT_enable : STD_LOGIC := '0';
@@ -93,7 +95,8 @@ ARCHITECTURE behavior OF processor IS
 
     --------------------------------------------------------------------------------------------------------  
 
-    SIGNAL reset_ifid, reset_idie : STD_LOGIC;
+    SIGNAL reset_ifid, reset_idie : STD_LOGIC := '0';
+    SIGNAL reset_exmem : STD_LOGIC := '0';
     COMPONENT mem_wb_register IS
         PORT (
             clk : IN STD_LOGIC;
@@ -117,6 +120,18 @@ ARCHITECTURE behavior OF processor IS
             mem_wb_out_regWrite : OUT STD_LOGIC;
             mem_wb_out_OUT_enable : OUT STD_LOGIC;
             mem_wb_out_rdest : OUT STD_LOGIC_VECTOR(2 DOWNTO 0)
+        );
+    END COMPONENT;
+
+    COMPONENT FlushUnit IS
+        PORT (
+            -- Inputs
+            branch : IN STD_LOGIC; -- branching exist or not
+            stage : IN STD_LOGIC; -- branching stage 0=Excute, 1=Memory
+            -- Outputs
+            flush_if_id : OUT STD_LOGIC; -- Reset FetchDecode Register
+            flush_id_ie : OUT STD_LOGIC; -- Reset DecodeExcute Register
+            flush_ie_mem : OUT STD_LOGIC -- Reset ExcuteMemory Register
         );
     END COMPONENT;
 
@@ -368,20 +383,10 @@ ARCHITECTURE behavior OF processor IS
             exception_flag, address_change_flag, stage_detector, flag_enable : OUT STD_LOGIC -- stage_detection { 1=>mem, 0=>execute  }
         );
     END COMPONENT;
-    COMPONENT FlushUnit IS
-        PORT (
-            -- Inputs
-            branch : IN STD_LOGIC; -- branching exist or not
-            stage : IN STD_LOGIC; -- branching stage 0=Excute, 1=Memory
-            -- Outputs
-            flush_if_id : OUT STD_LOGIC; -- Reset FetchDecode Register
-            flush_id_ie : OUT STD_LOGIC; -- Reset DecodeExcute Register
-            flush_ie_mem : OUT STD_LOGIC -- Reset ExcuteMemory Register
-        );
-    END COMPONENT;
 BEGIN
-    reset_ifid <= reset OR ((NOT instruction_reg(0)) AND instruction(0));
-    reset_idie <= pc_stall;
+    reset_ifid <= flush_if_id OR reset OR ((NOT instruction_reg(0)) AND instruction(0));
+    reset_idie <= pc_stall OR flush_id_ie OR reset;
+    reset_exmem <= flush_ie_mem OR reset;
     pause_ifid <= (pc_stall OR HLT);
 
     selected_instruction_ifid <= instruction_reg WHEN instruction_reg(0) = '1' ELSE
@@ -572,7 +577,7 @@ BEGIN
     EX_MEM_Register1 : ex_mem_register PORT MAP(
         -- Clock and reset
         clk => clk,
-        reset => reset,
+        reset => reset_exmem,
 
         -- Input signals
         ex_mem_in_rsrc2 => ex_mem_in_rsrc2,
@@ -746,6 +751,15 @@ BEGIN
         address_change_flag => acu_address_change_flag,
         stage_detector => acu_stage_detector,
         flag_enable => acu_flag_enable
+    );
+    FlushUnit1 : FlushUnit PORT MAP(
+        -- Inputs
+        branch => acu_address_change_flag,
+        stage => acu_stage_detector,-- branching stage 0=Excute, 1=Memory
+        -- Outputs
+        flush_if_id => flush_if_id, -- Reset FetchDecode Register
+        flush_id_ie => flush_id_ie, -- Reset DecodeExcute Register
+        flush_ie_mem => flush_ie_mem -- Reset ExcuteMemory Register
     );
     out_port <= out_port_internal;
     PROCESS (clk) BEGIN
