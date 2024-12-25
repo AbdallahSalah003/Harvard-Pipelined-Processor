@@ -754,7 +754,7 @@ BEGIN
             reserved_flags <= (OTHERS => '0');
             instruction_reg <= (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
-            IF (pc_stall = '0' OR HLT = '1') THEN
+            IF (pc_stall = '0' AND HLT = '0') THEN
                 pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
             END IF;
             IF instruction_reg(0) = '1' THEN
