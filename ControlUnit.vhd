@@ -89,7 +89,7 @@ BEGIN
         '1' WHEN opCode = "01011" ELSE --IADD
         '1' WHEN opCode = "10000" ELSE --STD
         '1' WHEN opCode = "01111" ELSE --LDD
-        '1' WHEN opCode = "01111" ELSE --LDD
+        '1' WHEN opCode = "10100" ELSE --JMP
         '0';
     usersrc2 <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01000" ELSE --ADD

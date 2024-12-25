@@ -126,6 +126,7 @@ ARCHITECTURE behavior OF processor IS
     COMPONENT FlushUnit IS
         PORT (
             -- Inputs
+            clk : IN STD_LOGIC; -- Clock signal
             branch : IN STD_LOGIC; -- branching exist or not
             stage : IN STD_LOGIC; -- branching stage 0=Excute, 1=Memory
             -- Outputs
@@ -384,7 +385,7 @@ ARCHITECTURE behavior OF processor IS
         );
     END COMPONENT;
 BEGIN
-    reset_ifid <= flush_if_id OR reset OR ((NOT instruction_reg(0)) AND instruction(0));
+    reset_ifid <= reset OR ((NOT instruction_reg(0)) AND instruction(0));
     reset_idie <= pc_stall OR flush_id_ie OR reset;
     reset_exmem <= flush_ie_mem OR reset;
     pause_ifid <= (pc_stall OR HLT);
@@ -754,6 +755,7 @@ BEGIN
     );
     FlushUnit1 : FlushUnit PORT MAP(
         -- Inputs
+        clk => clk,
         branch => acu_address_change_flag,
         stage => acu_stage_detector,-- branching stage 0=Excute, 1=Memory
         -- Outputs
@@ -769,13 +771,13 @@ BEGIN
             instruction_reg <= (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
             IF (pc_stall = '0' AND HLT = '0') THEN
-                IF (acu_address_change_flag = '1') THEN
-                    pc <= acu_out_address;
-                ELSE
+                IF (acu_address_change_flag = '0') THEN
                     pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
+                ELSE
+                    pc <= acu_out_address;
                 END IF;
             END IF;
-            IF instruction_reg(0) = '1' THEN
+            IF instruction_reg(0) = '1' OR flush_if_id = '1' OR acu_address_change_flag = '1' THEN
                 instruction_reg <= (OTHERS => '0');
             ELSE
                 instruction_reg <= instruction;

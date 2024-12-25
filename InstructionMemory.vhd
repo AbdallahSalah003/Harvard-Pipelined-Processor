@@ -14,9 +14,9 @@ ARCHITECTURE Behavioral OF InstructionMemory IS
     -- Memory declaration: 4K locations of 16 bits each
     TYPE memory_array IS ARRAY (0 TO 4095) OF STD_LOGIC_VECTOR(15 DOWNTO 0);
     SIGNAL memory : memory_array := (
-        0 => "1011100000000001", -- INT 2
-        1 => "0000000000000010", -- Example instruction 1 IMM
-        2 => "1011100000000001", -- Example instruction 2 INT 5
+        0 => "0111000000000001", -- INT 2
+        1 => "0000000000001000", -- Example instruction 1 IMM
+        2 => "1010000000000000", -- Example instruction 2 INT 5
         3 => "0000000000000101", -- Example instruction 3 IMM
         4 => "1010000000000000", -- Example instruction 4 JMP R1 
         5 => "1010100000000000", -- Example instruction 5 CALL R1
