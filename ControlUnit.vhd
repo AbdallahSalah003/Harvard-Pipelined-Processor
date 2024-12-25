@@ -63,6 +63,7 @@ BEGIN
         "00";
     RET <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "10110" ELSE --JMP
+        '1' WHEN opCode = "11000" ELSE --RTI
         '0';
     Alu_Select <= "000" WHEN Reset = '1' ELSE -- ALU_OP: 000: A, 001: B, 010: ADD, 011: SUB, 100: AND, 101: SETC, 110: NOT, 111:INC
         "001" WHEN opCode = "01110" ELSE --LDM 
